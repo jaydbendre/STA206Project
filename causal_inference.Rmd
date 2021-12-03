@@ -1,0 +1,49 @@
+---
+title: "causal_inference"
+author: "Collin"
+date: "12/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+# http://sekhon.berkeley.edu/matching/lalonde.html description of the dataset
+#AER article where the dataset is from https://business.baylor.edu//scott_cunningham/teaching/lalonde-1986.pdf
+
+
+
+knitr::opts_chunk$set(echo = TRUE)
+install.packages("qte")
+library(qte)
+work_training_df = lalonde.exp
+head(work_training_df)
+
+
+
+
+```
+
+# Exploratory Data Analysis
+```{r}
+work_training_df %>% 
+  group_by(treat) %>% 
+  summarise(count = n())
+  
+
+#Look at earnings for both groups in 75 and 78
+
+plot_data = work_training_df %>% 
+  pivot_longer(cols = c(re75,re78), names_to = "earnings_year",values_to = "earnings")
+
+plot_data %>% 
+  group_by(treat,earnings_year) %>% 
+  summarise(average_earnings = mean(earnings))
+
+plot_data
+
+ggplot(data = plot_data, mapping = aes(x = earnings_year, y = earnings, fill = as.factor(treat)))+
+  geom_boxplot()+
+  theme_minimal()+
+  ggtitle("Box Plot: Earnings in 1975 and 1978", subtitle = "comparison between control and treatment groups")
+  
+```
