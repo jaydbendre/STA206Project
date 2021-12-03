@@ -5,7 +5,7 @@ date: "12/2/2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r}
 
 # http://sekhon.berkeley.edu/matching/lalonde.html description of the dataset
 #AER article where the dataset is from https://business.baylor.edu//scott_cunningham/teaching/lalonde-1986.pdf
@@ -13,8 +13,13 @@ output: html_document
 
 
 knitr::opts_chunk$set(echo = TRUE)
-install.packages("qte")
+#install.packages("qte")
 library(qte)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(PerformanceAnalytics)
+library(gridExtra)
 work_training_df = lalonde.exp
 head(work_training_df)
 
@@ -44,6 +49,90 @@ plot_data
 ggplot(data = plot_data, mapping = aes(x = earnings_year, y = earnings, fill = as.factor(treat)))+
   geom_boxplot()+
   theme_minimal()+
+  ylim(c(0, 20000)) + 
   ggtitle("Box Plot: Earnings in 1975 and 1978", subtitle = "comparison between control and treatment groups")
   
 ```
+
+We can see that clearly the earnings are higher for the people who recieved the treatment.
+
+```{r}
+colSums(is.na(work_training_df))
+```
+
+There are no NA values in the dataset.
+
+```{r}
+sapply(work_training_df, class)
+```
+
+The variable "treat" needs to be converted to a factor.
+
+
+```{r}
+# convert variables to factors
+work_training_df$treat <- as.factor(work_training_df$treat)
+work_training_df$black <- as.factor(work_training_df$black)
+work_training_df$hispanic <- as.factor(work_training_df$hispanic)
+work_training_df$married <- as.factor(work_training_df$married)
+work_training_df$nodegree <- as.factor(work_training_df$nodegree)
+work_training_df$u74 <- as.factor(work_training_df$u74)
+work_training_df$u75 <- as.factor(work_training_df$u75)
+sapply(work_training_df, class)
+```
+
+```{r}
+sort(unique(work_training_df$education))
+
+encode <- function(col) {
+  if (col %in% c(3:8)) {
+    return(0)
+  } else if (col %in% c(9:12)) {
+    return(1)
+  } else {
+    return(2)
+  }
+}
+work_training_df$education =  as.factor(sapply(work_training_df$education,encode))
+work_training_df
+```
+
+0 = elementary or middle school
+1 = high school
+2 = college
+
+
+```{r}
+ggplot(data = work_training_df, mapping = aes(x = treat, y = re78, fill = education))+
+  geom_boxplot()+
+  theme_minimal() + 
+  ylim(c(0,20000))
+  
+  #ggtitle("Box Plot: Earnings in 1975 and 1978", subtitle = "comparison between control and treatment groups")
+```
+
+```{r}
+filtered_df_0 <- work_training_df %>% filter(treat == 0)
+filtered_df_1 <- work_training_df %>% filter(treat == 1)
+
+p1 <- ggplot(data = filtered_df_0, aes(re78)) + 
+  geom_histogram()
+
+p2 <- ggplot(data = filtered_df_1, aes(re78)) + 
+  geom_histogram()
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+
+```{r}
+p1 <- ggplot(data = work_training_df, aes(age)) + 
+  geom_histogram()
+
+p2 <- ggplot(data = work_training_df, aes(re78)) + 
+  geom_histogram()
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+
