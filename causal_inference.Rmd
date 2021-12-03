@@ -20,7 +20,8 @@ library(ggplot2)
 library(tidyr)
 library(PerformanceAnalytics)
 library(gridExtra)
-work_training_df = lalonde.exp
+library(MASS)
+work_training_df = lalonde.psid
 head(work_training_df)
 
 
@@ -135,4 +136,47 @@ p2 <- ggplot(data = work_training_df, aes(re78)) +
 grid.arrange(p1, p2, nrow=1)
 ```
 
+```{r}
+colnames(work_training_df)
+```
 
+
+```{r}
+sample_training_df <- work_training_df %>% dplyr::select(-id)
+m1 <- lm(re78 ~ ., data = sample_training_df)
+summary(m1)
+```
+
+Could be mainly due to a large number of indicator variables. Might be a good call to center it.
+
+```{r fig, fig.height=10, fig.width = 10}
+# Maybe scaling the data would help?
+sample_training_df <- sample_training_df %>% select_if(is.numeric) 
+
+sample_training_df_scaled <- work_training_df %>% mutate_if(is.numeric,scale)
+
+# Checking for any obvious patterns
+pairs(sample_training_df_scaled)
+
+# scatterplotmatrix
+chart.Correlation(sample_training_df_scaled %>% select_if(is.numeric))
+```
+
+There seems to be no obvious patterns
+
+```{r}
+m1_star<- lm(re78 ~., data = sample_training_df_scaled)
+summary(m1_star)
+```
+
+```{r}
+sample_training_df_scaled <- sample_training_df_scaled %>% dplyr::select(-c("id"))
+colnames(sample_training_df_scaled)
+m0 <- lm(re78 ~ 1, data = sample_training_df_scaled)
+m_full <- lm(re78 ~ ., data = sample_training_df_scaled)
+
+forward.aic <- stepAIC(m0, scope = list(lower = m0, upper = m_full), direction = "both", k = 2, trace = 0)
+
+forward$anova
+summary(forward)
+```
