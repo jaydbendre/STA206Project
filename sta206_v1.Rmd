@@ -1,0 +1,19 @@
+---
+title: "STA 206 Project"
+author: "Jay Bendre,, Grant Gambetta, Collin Kennedy"
+date: "02/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(qte)
+```
+
+```{r}
+# Loading the dataset
+data(lalonde)
+```
