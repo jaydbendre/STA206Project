@@ -191,7 +191,7 @@ m_test.summary
 plot(m_test)
 
 library(skedastic)
-white_lm(m_test)
+
 
 #library(onewaytests)
 #bf.test(log(re78.transformed1) ~ as.factor(treat), data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
@@ -275,13 +275,14 @@ hist(sqrt(work_training_df$re78))
 ```{r}
 ## Implementation where we check the difference in performance by scaling the dataset.
 work_training_df_exp <- lalonde.exp
+work_training_df_exp <- work_training_df_exp %>% dplyr::select(-c(id))
+
 
 sapply(work_training_df_exp %>% dplyr::select_if(is.integer),as.factor)
 
 work_training_df_exp$education =  as.factor(sapply(work_training_df_exp$education,encode))
 
-work_training_df_exp <- work_training_df_exp %>% dplyr::select(-c(id))
-work_training_df_exp$re78.transformed <- sqrt(1 + work_training_df_exp$re78)
+work_training_df_exp$re78.transformed <- sqrt(work_training_df_exp$re78)
 hist(work_training_df_exp$re78.transformed, breaks = 30)
 # Dataframe being used atm = work_training_df_exp
 colnames(work_training_df_exp)
@@ -305,9 +306,19 @@ forward.aic$anova
 summary(forward.aic)
 plot(forward.aic)
 car::vif(forward.aic)
+
+# Checking for endogenity between the X variables and the residuals using Wu-Hausman Test
+library(AER)
+ivreg1 <- ivreg(re78.transformed ~ black + treat + education + re75 + 
+    black:education | u75, data = work_training_df_exp)
+wu_hausman_test <- summary(ivreg1 ,diagnostics = TRUE)$diagnostics[8,]
+wu_hausman_test
+
+white_lm(forward.aic)
 ```
 
 ```{r}
+## TO BE IGNORED
 
 # Checking for instead of fitting the model with re74 and re75, we fit it with the difference for the incomes.
 
