@@ -6,12 +6,8 @@ output: html_document
 ---
 
 ```{r}
-
 # http://sekhon.berkeley.edu/matching/lalonde.html description of the dataset
 #AER article where the dataset is from https://business.baylor.edu//scott_cunningham/teaching/lalonde-1986.pdf
-
-
-
 knitr::opts_chunk$set(echo = TRUE)
 #install.packages("qte")
 library(qte)
@@ -21,12 +17,9 @@ library(tidyr)
 library(PerformanceAnalytics)
 library(gridExtra)
 library(MASS)
-work_training_df = lalonde.psid
+work_training_df = lalonde.exp
 head(work_training_df)
-
-
-
-
+dim(work_training_df)
 ```
 
 # Exploratory Data Analysis
@@ -154,12 +147,17 @@ Could be mainly due to a large number of indicator variables. Might be a good ca
 sample_training_df <- sample_training_df %>% select_if(is.numeric) 
 
 sample_training_df_scaled <- work_training_df %>% mutate_if(is.numeric,scale)
-
+#sample_training_df_scaled$re78 <- unscale(sample_training_df_scaled$re78)
 # Checking for any obvious patterns
 pairs(sample_training_df_scaled)
 
 # scatterplotmatrix
 chart.Correlation(sample_training_df_scaled %>% select_if(is.numeric))
+```
+
+```{r}
+work_training_df$re78[work_training_df$re78 == 0] <- 0.0001
+work_training_df
 ```
 
 There seems to be no obvious patterns
@@ -193,14 +191,50 @@ m1_star<- lm(re78 ~., data = sample_training_df_scaled)
 summary(m1_star)
 ```
 
+
 ```{r}
 #sample_training_df_scaled <- sample_training_df_scaled %>% dplyr::select(-c("id"))
 #colnames(sample_training_df_scaled)
 m0 <- lm(re78 ~ 1, data = sample_training_df_scaled)
-m_full <- lm(re78 ~ ., data = sample_training_df_scaled)
+m_full <- lm(re78 ~ .^2, data = sample_training_df_scaled)
 
 forward.aic <- stepAIC(m0, scope = list(lower = m0, upper = m_full), direction = "both", k = 2, trace = 0)
 
 forward.aic$anova
+<<<<<<< HEAD
 summary(forward.aic)
 ```
+=======
+```
+
+
+```{r}
+model2 <- lm(re78 ~ re75 + re74 + education + age + u74 + hispanic + married + 
+    re75:re74 + re75:u74 + re75:education + u74:married + re74:married + 
+    re74:age + re75:age + re74:education + treat, data = work_training_df)
+summary(model2)
+```
+
+```{r}
+boxcox(model2)
+```
+
+```{r}
+model2 <- lm(re78 ~ re75 + re74 + education + age + u74 + hispanic + married + 
+    re75:re74 + re75:u74 + re75:education + u74:married + re74:married + 
+    re74:age + re75:age + re74:education + treat, data = work_training_df)
+summary(model2)
+```
+
+
+```{r, fig, fig.height=5, fig.width=10}
+par(mfrow=c(1,2))
+plot(model2, which = 1)
+plot(model2, which = 2)
+```
+
+```{r}
+hist(sqrt(work_training_df$re78))
+```
+
+>>>>>>> f383975606f9327f471e8dd9c084aaf3c13b7244
