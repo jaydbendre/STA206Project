@@ -6,6 +6,11 @@ output: html_document
 ---
 
 ```{r}
+
+# Importing the dataset
+
+# Dataset Description: 
+
 # http://sekhon.berkeley.edu/matching/lalonde.html description of the dataset
 #AER article where the dataset is from https://business.baylor.edu//scott_cunningham/teaching/lalonde-1986.pdf
 knitr::opts_chunk$set(echo = TRUE)
@@ -17,6 +22,7 @@ library(tidyr)
 library(PerformanceAnalytics)
 library(gridExtra)
 library(MASS)
+library(caret)
 work_training_df = lalonde.exp
 head(work_training_df)
 dim(work_training_df)
@@ -218,7 +224,6 @@ white_lm(m_test)
 #library(stats)
 #m_test = glm(re78 ~ ., data = work_training_df_exp %>% dplyr::select(-c("re78.transformed1","re78.transformed")), family = "poisson")
 ```
-
 ```{r}
 m1_star<- lm(re78 ~., data = sample_training_df_scaled)
 summary(m1_star)
@@ -267,3 +272,73 @@ plot(model2, which = 2)
 hist(sqrt(work_training_df$re78))
 ```
 
+```{r}
+## Implementation where we check the difference in performance by scaling the dataset.
+work_training_df_exp <- lalonde.exp
+
+sapply(work_training_df_exp %>% dplyr::select_if(is.integer),as.factor)
+
+work_training_df_exp$education =  as.factor(sapply(work_training_df_exp$education,encode))
+
+work_training_df_exp <- work_training_df_exp %>% dplyr::select(-c(id))
+work_training_df_exp$re78.transformed <- sqrt(1 + work_training_df_exp$re78)
+hist(work_training_df_exp$re78.transformed, breaks = 30)
+# Dataframe being used atm = work_training_df_exp
+colnames(work_training_df_exp)
+
+# Selecting the required columns
+work_training_df_exp <- work_training_df_exp %>% dplyr::select(-c("re78"))
+
+# Scaling all the variables
+work_training_df_exp <- work_training_df_exp %>% dplyr::mutate_if(is.numeric, scale)
+
+# Model 0
+m0 <- lm(re78.transformed ~ 1, data = work_training_df_exp)
+
+# Full Model
+m.full <- lm(re78.transformed ~ .^2, data = work_training_df_exp)
+
+# Implementing forward selection
+forward.aic <- stepAIC(m0, scope = list(lower = ~1, upper = m.full), direction = "both", k = log(length(work_training_df_exp)), trace = 0)
+
+forward.aic$anova
+summary(forward.aic)
+plot(forward.aic)
+car::vif(forward.aic)
+```
+
+```{r}
+
+# Checking for instead of fitting the model with re74 and re75, we fit it with the difference for the incomes.
+
+# Assigning it to another variable
+work_training_df_exp_diff <- work_training_df_exp
+
+# Computing the difference variable to show the general inflation of salary in 1974 - 1975
+
+work_training_df_exp_diff$salary_infl <- work_training_df_exp$re75 - work_training_df_exp$re74
+
+# Removing re74 and re75
+work_training_df_exp_diff <- work_training_df_exp %>% dplyr::select(-c("re74","re75"))
+
+# Model 0
+m0 <- lm(re78.transformed ~ 1, data = work_training_df_exp_diff)
+
+# Full Model
+m.full <- lm(re78.transformed ~ .^2, data = work_training_df_exp_diff)
+
+forward.aic <- stepAIC(m0, scope = list(lower = m0, upper = m.full), direction = "both", k = 2, trace = 0)
+
+forward.aic$anova
+summary(forward.aic)
+plot(forward.aic)
+car::vif(forward.aic)
+```
+
+```{r}
+
+```
+
+```{r}
+# Checking for strongly correlated variables
+```
