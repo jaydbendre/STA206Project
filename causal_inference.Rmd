@@ -164,26 +164,59 @@ There seems to be no obvious patterns
 
 ```{r}
 work_training_df_exp <- lalonde.exp
+
+sapply(work_training_df_exp %>% dplyr::select_if(is.integer),as.factor)
+
+work_training_df_exp$education =  as.factor(sapply(work_training_df$education,encode))
+
+work_training_df_exp <- work_training_df %>% dplyr::select(-c(id))
 work_training_df_exp$re78.transformed <- sqrt(1 + work_training_df_exp$re78)
 hist(work_training_df_exp$re78.transformed, breaks = 30)
 ```
 
 ```{r}
-
-work_training_df_exp$re78.transformed1 <- work_training_df_exp$re78 + mean(work_training_df_exp$re78)
-hist(work_training_df_exp$re78.transformed1,breaks = 30)
-boxcox(work_training_df$re78.transformed1~., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+#work_training_df_exp$re78.transformed1 <- work_training_df_exp$re78 + mean(work_training_df_exp$re78)
+#hist(work_training_df_exp$re78.transformed1,breaks = 30)
 
 
-m_test = lm(re78.transformed1 ~ ., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+m_test = lm(re78.transformed ~ ., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed1")))
 m_test.summary = summary(m_test)
 m_test.summary
 plot(m_test)
 
-bc <- boxcox(re78.transformed1~., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+library(skedastic)
+white_lm(m_test)
 
-(lambda <- bc$x[which.max(bc$y)])
-work_training_df_exp$re78.transformed1 <- ((work_training_df_exp$re78.transformed1 ^ lambda) -1)/lambda
+#library(onewaytests)
+#bf.test(log(re78.transformed1) ~ as.factor(treat), data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+
+#library(lmtest)
+#bptest(lm(log(re78.transformed1) ~ as.factor(treat), data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed"))))
+
+#model_weights <- ifelse(work_training_df_exp$treat == 0,
+                        #(1/table(work_training_df_exp$treat)[1]) * 0.5,
+                        #(1/table(work_training_df_exp$treat)[2]) * 0.5)
+#model_weights
+#m_test = lm(re78.transformed1 ~ ., weights = model_weights, data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+#m_test.summary = summary(m_test)
+#m_test.summary
+#plot(m_test)
+
+
+
+#bc <- boxcox(re78.transformed1~., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+
+#(lambda <- bc$x[which.max(bc$y)])
+
+#work_training_df_exp$re78.transformed1 <- ((work_training_df_exp$re78.transformed1 ^ lambda) -1)/lambda
+
+#m_test = lm(log(re78.transformed1) ~ ., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+#m_test.summary = summary(m_test)
+#m_test.summary
+#plot(m_test)
+
+#library(stats)
+#m_test = glm(re78 ~ ., data = work_training_df_exp %>% dplyr::select(-c("re78.transformed1","re78.transformed")), family = "poisson")
 ```
 
 ```{r}
@@ -201,10 +234,7 @@ m_full <- lm(re78 ~ .^2, data = sample_training_df_scaled)
 forward.aic <- stepAIC(m0, scope = list(lower = m0, upper = m_full), direction = "both", k = 2, trace = 0)
 
 forward.aic$anova
-<<<<<<< HEAD
 summary(forward.aic)
-```
-=======
 ```
 
 
@@ -237,4 +267,3 @@ plot(model2, which = 2)
 hist(sqrt(work_training_df$re78))
 ```
 
->>>>>>> f383975606f9327f471e8dd9c084aaf3c13b7244
