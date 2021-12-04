@@ -165,18 +165,42 @@ chart.Correlation(sample_training_df_scaled %>% select_if(is.numeric))
 There seems to be no obvious patterns
 
 ```{r}
+work_training_df_exp <- lalonde.exp
+work_training_df_exp$re78.transformed <- sqrt(1 + work_training_df_exp$re78)
+hist(work_training_df_exp$re78.transformed, breaks = 30)
+```
+
+```{r}
+
+work_training_df_exp$re78.transformed1 <- work_training_df_exp$re78 + mean(work_training_df_exp$re78)
+hist(work_training_df_exp$re78.transformed1,breaks = 30)
+boxcox(work_training_df$re78.transformed1~., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+
+
+m_test = lm(re78.transformed1 ~ ., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+m_test.summary = summary(m_test)
+m_test.summary
+plot(m_test)
+
+bc <- boxcox(re78.transformed1~., data = work_training_df_exp %>% dplyr::select(-c("re78","re78.transformed")))
+
+(lambda <- bc$x[which.max(bc$y)])
+work_training_df_exp$re78.transformed1 <- ((work_training_df_exp$re78.transformed1 ^ lambda) -1)/lambda
+```
+
+```{r}
 m1_star<- lm(re78 ~., data = sample_training_df_scaled)
 summary(m1_star)
 ```
 
 ```{r}
-sample_training_df_scaled <- sample_training_df_scaled %>% dplyr::select(-c("id"))
-colnames(sample_training_df_scaled)
+#sample_training_df_scaled <- sample_training_df_scaled %>% dplyr::select(-c("id"))
+#colnames(sample_training_df_scaled)
 m0 <- lm(re78 ~ 1, data = sample_training_df_scaled)
 m_full <- lm(re78 ~ ., data = sample_training_df_scaled)
 
 forward.aic <- stepAIC(m0, scope = list(lower = m0, upper = m_full), direction = "both", k = 2, trace = 0)
 
-forward$anova
-summary(forward)
+forward.aic$anova
+summary(forward.aic)
 ```
