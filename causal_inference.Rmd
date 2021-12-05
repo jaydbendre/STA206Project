@@ -303,8 +303,17 @@ m.full <- lm(re78.transformed ~ .^2, data = work_training_df_exp)
 forward.aic <- stepAIC(m0, scope = list(lower = ~1, upper = m.full), direction = "both", k = log(length(work_training_df_exp)), trace = 0)
 
 forward.aic$anova
-summary(forward.aic)
-plot(forward.aic)
+forward.aic.summary <- summary(forward.aic)
+library(stargazer)
+knitr::kable(forward.aic,"latex")
+png("ResidualsVsFitted.png", width = 800, height = 600)
+p1 <- plot(forward.aic, which = 1)
+dev.off()
+
+p1<-ggplot(forward.aic, aes(.fitted, .resid))+geom_point() + stat_smooth(method="loess", level = 0)+geom_hline(yintercept=0, col="red", linetype="dashed") + xlab("Fitted values")+ylab("Residuals") +ggtitle("Residual vs Fitted Plot", ) + theme_minimal() + theme(plot.title = element_text(hjust = 0.5))
+
+p1
+ggsave("FittedVsResiduals.png",p1)    
 car::vif(forward.aic)
 
 # Checking for endogenity between the X variables and the residuals using Wu-Hausman Test
@@ -312,9 +321,13 @@ library(AER)
 ivreg1 <- ivreg(re78.transformed ~ black + treat + education + re75 + 
     black:education | u75, data = work_training_df_exp)
 wu_hausman_test <- summary(ivreg1 ,diagnostics = TRUE)$diagnostics[8,]
+
 wu_hausman_test
+# Exporting the output as a latex
+knitr::kable(wu_hausman_test,"latex")
 
 white_lm(forward.aic)
+knite::kable(whi)
 ```
 
 ```{r}
@@ -347,9 +360,107 @@ car::vif(forward.aic)
 ```
 
 ```{r}
+## Ggplot for basic transformations
+work_training_df_exp <- lalonde.exp
+work_training_df_exp <- work_training_df_exp %>% dplyr::select(-c(id))
 
+
+sapply(work_training_df_exp %>% dplyr::select_if(is.integer),as.factor)
+
+work_training_df_exp$education =  as.factor(sapply(work_training_df_exp$education,encode))
+
+#most_common_transformations_title <- c("$Log(1+x)$", "$ x^{1/2} $", "$\frac{1}{(x+1)}$")
+
+#transformed_vectors <- c(log(1 + work_training_df_exp$re78),sqrt(work_training_df_exp$re78),1/(1 + work_training_df_exp$re78))
+
+p <- c()
+
+work_training_df_exp$re78.transformed <- log(1 + work_training_df_exp$re78)
+m1 <- lm(re78.transformed ~ ., data = work_training_df_exp %>% dplyr::select(-c(re78)))
+
+
+require(ggfortify)
+p1 <- autoplot(m1, which = 1:2, ncol = 2) + theme_minimal()
+
+work_training_df_exp$re78.transformed <- sqrt(work_training_df_exp$re78)
+m1 <- lm(re78.transformed ~ ., data = work_training_df_exp %>% dplyr::select(-c(re78)))
+p2 <- autoplot(m1, which = 1:2, ncol = 2) + theme_minimal()
+
+
+work_training_df_exp$re78.transformed <- (1 + work_training_df_exp$re78) ^ -1
+m1 <- lm(re78.transformed ~ ., data = work_training_df_exp %>% dplyr::select(-c(re78)))
+p3 <- autoplot(m1, which = 1:2, ncol = 2) + theme_minimal()
+
+p3
+
+grid.arrange(list(p), ncol = 2, nrow = 1)
 ```
 
 ```{r}
+colnames(work_training_df_exp)
 # Checking for strongly correlated variables
+```
+
+```{r}
+obs_df <- lalonde.psid
+obs_df$treat <- as.factor(obs_df$treat)
+obs_df$black <- as.factor(obs_df$black)
+obs_df$hispanic <- as.factor(obs_df$hispanic)
+obs_df$married <- as.factor(obs_df$married)
+obs_df$nodegree <- as.factor(obs_df$nodegree)
+obs_df$u74 <- as.factor(obs_df$u74)
+obs_df$u75 <- as.factor(obs_df$u75)
+obs_df$education <- as.factor(sapply(obs_df$education, encode))
+obs_df <- obs_df %>% dplyr::select(-c(id))
+head(obs_df)
+obs_model <- lm(re78 ~ ., data = obs_df)
+summary(obs_model)
+par(mfrow=c(1,2))
+plot(obs_model, which = 1)
+plot(obs_model, which = 2)
+#obs_df_scaled <- obs_df %>% mutate_if(is.numeric, scale)
+#obs_df_scaled
+null_model <- lm(re78 ~ 1, data = obs_df)
+full_model <- lm(re78 ~ .^3 + re74^2 + re75^2, data = obs_df)
+
+forward.aic <- stepAIC(null_model, scope = list(lower = null_model, upper = full_model), direction = "both", k = 2, trace = 0)
+forward.aic$anova
+# split data
+smp_size <- floor(0.7 * nrow(obs_df_scaled))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(obs_df)), size = smp_size)
+
+train_obs_df <- obs_df[train_ind, ]
+test_obs_df <- obs_df[-train_ind, ]
+
+#specify the cross-validation method: leave one out cv
+ctrl <- trainControl(method = "adaptive_cv",repeats = 5, allowParallel = T)
+
+#fit a regression model and use LOOCV to evaluate performance
+model <- train(re78 ~ re75 + re74 + education + age + u74 + hispanic + married + 
+    re75:re74 + re75:u74 + re75:education + u74:married + re74:married + 
+    re74:age + re75:age + re74:education + education:u74 + re75:re74:education + 
+    re75:education:u74 + re74^2 + re75^2, data = train_obs_df, method = "lm", trControl = ctrl)
+model
+pred <- predict(model, newdata = test_obs_df, level = 0.95)
+postResample(pred = pred, obs = test_obs_df$re78)
+```
+
+```{r}
+# Mixing both the experimental and control dataset
+obs_data <- lalonde.psid
+exp_data<- lalonde.exp
+
+obs_data <- obs_data %>% dplyr::select(-c(id))
+exp_data <- exp_data %>% dplyr::select(-c(id))
+
+sapply(obs_data %>% dplyr::select_if(is.integer),as.factor)
+sapply(exp_data %>% dplyr::select_if(is.integer),as.factor)
+
+obs_data$education =  as.factor(sapply(obs_data$education,encode))
+exp_data$education =  as.factor(sapply(exp_data$education,encode))
+
+obs_data$re78.transformed <- obs_data
 ```
